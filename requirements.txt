@@ -1,0 +1,5 @@
+SQLAlchemy==1.4.49
+openai==0.27.8
+streamlit==1.24.1
+gspread==5.10.0
+python-dotenv==1.0.0
