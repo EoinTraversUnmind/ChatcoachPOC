@@ -1,9 +1,14 @@
 
 
-# Connecting to DB
+# POC Work Coach Chatbot
 
-```sh
-source .env
-PGPASSWORD=$DB_PASSWORD
-psql -h $DB_HOST -p $DB_PORT -U $DB_USERNAME $DB_DATABASE
+# Running it
+
+
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+# Optionally add --server.port 80, or whatever, at the end
+# See https://docs.streamlit.io/library/advanced-features/configuration
 ```
