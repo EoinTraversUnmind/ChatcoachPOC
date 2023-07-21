@@ -24,15 +24,16 @@ def connect_db() -> sa.engine.base.Connection:
         db_engine = sa.create_engine(db_url)
         db_conn = db_engine.connect()
     except:
-        print("Couldn't connect to the database. Are you running locally?")
-        db_conn = None
+        raise Exception("Couldn't connect to the database. VPN?")
+        # print("Couldn't connect to the database. Are you running locally?")
+        # db_conn = None
         # TODO: Set up schema here if it doesn't exist
     return db_conn
 
 query_templates = {
-    'session': 'insert into public.sessions (session_id, session_lbl, parameters_lbl, session_parameters) values (:session_id, :session_lbl, :parameters_lbl, :session_parameters)',
-    'chat': "insert into public.chat_logs (session_id, parameters_lbl, chat_step, input, output) values (:session_id, :parameters_lbl, :chat_step, :input, :output)",
-    'feedback': ""
+    'session': 'insert into public.sessions (session_id, session_lbl, persona, parameters) values (:session_id, :session_lbl, :persona, :parameters)',
+    'chat': "insert into public.chat_logs (session_id, persona, chat_step, input, output) values (:session_id, :persona, :chat_step, :input, :output)",
+    'feedback': "insert into public.feedback (session_id, chat_step, rating, feedback_text) values (:session_id, :chat_step, :rating, :feedback_text)"
 }
 
 def run_query(db_conn: sa.engine.base.Connection,
@@ -48,28 +49,26 @@ def log_session(ss: st.runtime.state.session_state_proxy.SessionStateProxy):
     run_query(db_conn, 'session',
               session_id = ss['uuid'],
               session_lbl = ss['user_label'],
-              parameters_lbl = ss['bot_param_id'],
-              session_parameters = json.dumps(ss['bot_params']))
+              persona = ss['persona_id'],
+              parameters = json.dumps(ss['persona']))
 
 def log_chat(ss: st.runtime.state.session_state_proxy.SessionStateProxy):
     db_conn = ss['db_conn']
     run_query(db_conn, 'chat',
               session_id = ss['uuid'],
-              parameters_lbl = ss["bot_param_id"],
+              persona = ss["persona_id"],
               chat_step = ss["chat_step"],
               input = ss["input"],
               output = ss["output"]
               )
 
 def log_feedback(ss: st.runtime.state.session_state_proxy.SessionStateProxy):
-    raise(NotImplemented)
-    # db_conn = ss['db_conn']
-    # run_query(db_conn, 'feedback',
-    #           session_id = ss['uuid'],
-    #           session_lbl = ss['user_label'],
-    #           parameters_lbl = ss['bot_param_id'],
-    #           session_parameters = json.dumps(ss['bot_params']))
-
+    db_conn = ss['db_conn']
+    run_query(db_conn, 'feedback',
+              session_id = ss['uuid'],
+              chat_step = ss['chat_step'],
+              rating = ss['feedback_rating'],
+              feedback_text = ss['feedback_text'])
 
 def get_params_from_gsheets() -> list:
     """We have a gsheet with all our different possible chatbot configurations

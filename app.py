@@ -2,11 +2,12 @@ import os
 from uuid import uuid4 as generate_uuid
 import openai
 import streamlit as st
+from streamlit_star_rating import st_star_rating
 from dotenv import load_dotenv
 import sqlalchemy as sa
 import gspread
 
-from src import connect_db, get_params_from_gsheets, log_session, log_chat
+from src import connect_db, get_params_from_gsheets, log_session, log_chat, log_feedback
 # Based on
 # https://github.com/streamlit/llm-examples/blob/main/Chatbot.py
 
@@ -17,8 +18,8 @@ if "setup" not in st.session_state:
     load_dotenv()
     st.session_state["OPENAI_KEY"] = os.getenv("OPENAI_KEY")
     st.session_state["db_conn"] = connect_db()
-    possible_bot_params = get_params_from_gsheets()
-    st.session_state["possible_bot_params"] = {p['pars_label']: p for p in possible_bot_params}
+    possible_personas = get_params_from_gsheets()
+    st.session_state["possible_personas"] = {p['persona']: p for p in possible_personas}
     st.session_state['uuid'] = generate_uuid()
     st.session_state['chat_step'] = 0
     st.session_state['started'] = False
@@ -27,37 +28,50 @@ if "setup" not in st.session_state:
 
 def start_session():
     """`this is triggered once the big Start button in the sidebar is clicked, locking in the parameters.`"""
-    bot_param_id = st.session_state["bot_param_id"]
-    BOT_PARAMS = st.session_state['possible_bot_params'][bot_param_id]
-    st.session_state['bot_params'] = BOT_PARAMS
-    st.session_state["messages"] = [{"role": "system", "content": BOT_PARAMS["system_prompt"]}]
-    if BOT_PARAMS["initial_message"]:
-        st.session_state["messages"].append({"role": "assistant", "content": BOT_PARAMS["initial_message"]})
+    persona_id = st.session_state["persona_id"]
+    PERSONA = st.session_state['possible_personas'][persona_id]
+    st.session_state['persona'] = PERSONA
+    st.session_state["messages"] = [{"role": "system", "content": PERSONA["system_prompt"]}]
+    if PERSONA["initial_message"]:
+        st.session_state["messages"].append({"role": "assistant", "content": PERSONA["initial_message"]})
     st.session_state["started"] = True
     log_session(st.session_state)
 
+def save_feedback():
+    # This goes at the top of the screen, don't know how to change it yet...
+    st.write("[Feedback received]")
+    log_feedback(st.session_state)
+    st.session_state["feedback_text"] = ""
 
 with st.sidebar:
     # Which parameters to use?
     # These options are disabled once a conversation starts
-    _options = st.session_state["possible_bot_params"].keys()
-    # _options = [''] + list(_options)
-    #is_disabled = st.session_state["chat_step"] > 0
-    st.selectbox("Select parameter set", key="bot_param_id",
+    _options = st.session_state["possible_personas"].keys()
+    st.title("Settings")
+    st.selectbox("Select persona", key="persona_id",
                  options = _options,
                  disabled = st.session_state["started"] == True)
-    # on_change = reset_converation)
     st.text_input("(Optional) Enter a label for this conversation", key = "user_label",
                   disabled = st.session_state["started"] == True)
     st.button("Start", on_click = start_session,
               disabled = st.session_state["started"] == True)
+
+    # Feeback
+    st.write("\n-----\n")
+    st.title("Feedback")
+    st.write("Use the fields below at any time, as often as you like, to provide feedback")
+
+    st_star_rating(label = "How is the chat going so far?",
+                   maxValue = 5, defaultValue = 3, key = "feedback_rating", emoticons = True )
+    st.text_input("Do you have any notes to add?", key = "feedback_text")
+    st.button("Submit", on_click = save_feedback) # Doesn't do anything yet...
 
 
 ## Start of the main app
 st.title("💬 Unmind Career Coach Bot")
 
 if st.session_state['started']:
-    BOT_PARAMS = st.session_state['possible_bot_params'][st.session_state["bot_param_id"]]
+    PERSONA = st.session_state['possible_personas'][st.session_state["persona_id"]]
 else:
     # This shouldn't happen at present
     st.info("Choose your settings parameter set from the menu to the left to begin")
@@ -66,9 +80,9 @@ else:
 
 #
 if "messages" not in st.session_state:
-    st.session_state["messages"] = [{"role": "system", "content": BOT_PARAMS["system_prompt"]}]
-    if BOT_PARAMS["initial_message"]:
-        st.session_state["messages"].append({"role": "assistant", "content": BOT_PARAMS["initial_message"]})
+    st.session_state["messages"] = [{"role": "system", "content": PERSONA["system_prompt"]}]
+    if PERSONA["initial_message"]:
+        st.session_state["messages"].append({"role": "assistant", "content": PERSONA["initial_message"]})
 
 
 # Show the conversation so far
@@ -76,19 +90,20 @@ for msg in st.session_state.messages:
     if msg["role"] != "system":
         st.chat_message(msg["role"]).write(msg["content"])
 
-if prompt := st.chat_input(BOT_PARAMS["input_prompt"]):
+if prompt := st.chat_input(PERSONA["input_prompt"]):
     st.session_state["chat_step"] += 1
     st.session_state["input"] = prompt
     # TODO: Add loading indicator here
     openai.api_key = st.session_state["OPENAI_KEY"]
     st.session_state.messages.append({"role": "user", "content": prompt})
     st.chat_message("user").write(prompt)
-    response = openai.ChatCompletion.create(model=BOT_PARAMS["gpt_model"], messages=st.session_state.messages)
-    msg = response.choices[0].message
-    print(msg)
-    print(type(msg))
-    st.session_state["output"] = msg['content']
+    # Display loading indicator while we get response
+    with st.spinner(''):
+        response = openai.ChatCompletion.create(model=PERSONA["gpt_model"],
+                                                messages=st.session_state.messages)
+        msg = response.choices[0].message
+        st.session_state["output"] = msg['content']
     # msg = {"role" : "assistant", "content": "Hello!"}
+    st.chat_message("assistant").write(msg["content"])
     st.session_state["messages"].append(msg)
     log_chat(st.session_state)
-    st.chat_message("assistant").write(msg["content"])
