@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import sqlalchemy as sa
 import gspread
 
-from src import connect_db, get_params_from_gsheets, log_session, log_chat, log_feedback
+from src import check_password, connect_db, get_params_from_gsheets, log_session, log_chat, log_feedback
 # Based on
 # https://github.com/streamlit/llm-examples/blob/main/Chatbot.py
 
@@ -16,6 +16,8 @@ from src import connect_db, get_params_from_gsheets, log_session, log_chat, log_
 if "setup" not in st.session_state:
     # This is only run when the page first loads
     load_dotenv()
+    if check_password() == False:
+        st.stop()
     st.session_state["OPENAI_KEY"] = os.getenv("OPENAI_KEY")
     st.session_state["db_conn"] = connect_db()
     possible_personas = get_params_from_gsheets()
