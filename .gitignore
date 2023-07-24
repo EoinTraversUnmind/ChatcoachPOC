@@ -1,5 +1,6 @@
 .env
+.venv
 .ipynb_checkpoints
 .secrets
+secrets.toml
 src/__pycache__/
-.venv
