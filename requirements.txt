@@ -1,5 +1,7 @@
 SQLAlchemy==1.4.49
+psycopg2-binary==2.9.6
 openai==0.27.8
 streamlit==1.24.1
+st-star-rating==0.0.5
 gspread==5.10.0
 python-dotenv==1.0.0
