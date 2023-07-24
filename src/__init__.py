@@ -14,7 +14,7 @@ def check_password():
     load_dotenv()
     def password_entered():
         """Checks whether a password entered by the user is correct."""
-        if st.session_state["password"] == os.getenv("APP_PASSWORD"): # st.secrets["password"]:
+        if st.session_state["password"] == st.secrets["password"]: # os.getenv("APP_PASSWORD"):
             st.session_state["password_correct"] = True
             del st.session_state["password"]  # don't store password
         else:
