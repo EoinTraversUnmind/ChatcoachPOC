@@ -108,15 +108,15 @@ def get_params_from_gsheets() -> list:
     load_dotenv()
     credentials = {
         "type": "service_account",
-        "project_id": "coaching-chatpot",
-        "private_key_id": "d4afbac380be1261d7838cbd27ca8b5257a0c354",
+        "project_id": os.getenv("GDRIVE_PROJECT_ID"),
+        "private_key_id": os.getenv("GDRIVE_PRIVATE_KEY_ID"),
         "private_key": os.getenv("GDRIVE_PRIVATE_KEY").replace('\\n', '\n'),
-        "client_email": "coaching-chatbot-streamlit@coaching-chatpot.iam.gserviceaccount.com",
-        "client_id": "117297200275051034388",
+        "client_email": os.getenv("GDRIVE_CLIENT_EMAIL"),
+        "client_id": os.getenv("GDRIVE_CLIENT_ID"),
         "auth_uri": "https://accounts.google.com/o/oauth2/auth",
         "token_uri": "https://oauth2.googleapis.com/token",
         "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-        "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/coaching-chatbot-streamlit%40coaching-chatpot.iam.gserviceaccount.com",
+        "client_x509_cert_url": os.getenv("GDRIVE_X509_URL"),
         "universe_domain": "googleapis.com"
     }
     try:
